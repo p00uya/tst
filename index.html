@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Persian Scout Hub — MVP (Fixed KPI + Animated Heatmap)</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    html,body{height:100%} body{margin:0;font-family:system-ui,Segoe UI,Roboto,"Vazirmatn",Tahoma,Arial,sans-serif;background:#0b0f11;color:#e8eef2}
+    :root{--line:#24313a;--muted:#9fb0bc;--hi:#19c37d;--warn:#f7b500;--card:#0f1417;--shadow:0 10px 30px rgba(0,0,0,.35)}
+    .container{max-width:1240px;margin:0 auto;padding:16px} .grid{display:grid;gap:12px} .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;box-shadow:var(--shadow)}
+    .pill{font-size:11px;padding:4px 8px;border:1px solid var(--line);border-radius:999px;color:#cfe7d9}
+    .btn{background:var(--hi);color:#06130c;border:0;border-radius:12px;padding:10px 14px;font-weight:700;cursor:pointer}
+    .btn.ghost{background:transparent;color:#cdebdc;border:1px solid var(--line)} .muted{color:var(--muted)}
+    header{position:sticky;top:0;z-index:50;background:rgba(11,15,17,.85);border-bottom:1px solid var(--line);backdrop-filter:blur(8px)}
+    header .bar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px}
+    .title{display:flex;gap:10px;align-items:center} .logo{width:28px;height:28px;border-radius:8px;background:conic-gradient(from 180deg,#19c37d,#72ffc2,#19c37d)}
+    nav.tabs{display:flex;gap:8px;overflow:auto;padding:8px 16px;border-top:1px solid var(--line)}
+    .tab{white-space:nowrap;padding:8px 12px;border-radius:999px;border:1px dashed #2a3943} .tab.active{border-style:solid;background:#0f1b1f}
+    .table{width:100%;border-collapse:collapse} .table th,.table td{border-bottom:1px solid #1f2b33;padding:8px 6px;text-align:center;font-size:13px}
+    .table th{color:#cfe7d9;font-weight:700;background:#0f1b1f}
+    .spark{height:40px;width:100%;border:1px solid var(--line);border-radius:10px;position:relative;overflow:hidden;background:#121a1f}
+    .spark svg{position:absolute;inset:0}
+    .two{grid-template-columns:1.2fr .8fr} .three{grid-template-columns:repeat(3,1fr)}
+    @media (max-width:1100px){.two,.three{grid-template-columns:1fr}}
+
+    /* KPI Rings */
+    .kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    @media(max-width:980px){.kpi{grid-template-columns:repeat(2,1fr)}} @media(max-width:560px){.kpi{grid-template-columns:1fr}}
+    .ring{width:140px;height:140px;margin:0 auto;border-radius:50%;position:relative;display:grid;place-items:center}
+    .ring canvas{position:absolute;top:0;left:0} .ring span{position:relative;font-size:14px;font-weight:800}
+
+    /* Pitch + Heatmap */
+    .pitch{position:relative;aspect-ratio:16/10;border:1px solid var(--line);border-radius:12px;background:#0f1b1f}
+    .pitch .lines{position:absolute;inset:8px;border:2px solid rgba(198,255,226,.35);border-radius:8px}
+    .pitch .mid{position:absolute;left:50%;top:8px;bottom:8px;width:2px;background:rgba(198,255,226,.35)}
+    .heat{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen}
+    .legend{display:flex;gap:6px;align-items:center}
+    .grad{height:10px;width:160px;background:linear-gradient(90deg,rgba(25,195,125,.1),rgba(25,195,125,.9));border-radius:99px;border:1px solid #244}
+  </style>
+</head>
+<body>
+<header>
+  <div class="bar container">
+    <div class="title">
+      <div class="logo"></div>
+      <div>
+        <div style="font-weight:900;letter-spacing:.3px">Persian Scout Hub — MVP</div>
+        <div class="muted" style="font-size:12px">داشبورد با KPI ثابت و Heatmap انیمیشنی</div>
+      </div>
+    </div>
+    <div class="row">
+      <select><option>U17 — جنوب تهران</option><option>U15 — اهواز</option><option>بانوان — شهرری</option></select>
+      <button class="btn ghost" id="toggleWire">Wireframe</button>
+      <button class="btn" id="startDemo">Start Demo</button>
+    </div>
+  </div>
+  <nav class="tabs">
+    <span class="tab active">داشبورد</span><span class="tab">بازیکنان</span><span class="tab">تمرینات</span><span class="tab">ویدئو</span><span class="tab">AR/VR</span><span class="tab">NFT</span>
+  </nav>
+</header>
+
+<main class="container grid" style="gap:14px">
+
+  <!-- KPI RINGS -->
+  <section class="kpi">
+    <div class="card">
+      <div class="ring"><canvas id="acwrCanv" width="140" height="140"></canvas><span id="acwrTxt">ACWR 0.84</span></div>
+      <div class="muted" style="text-align:center">تعادل بار تمرینی</div>
+    </div>
+    <div class="card">
+      <div class="ring"><canvas id="injCanv" width="140" height="140"></canvas><span id="injTxt">ریسک 31%</span></div>
+      <div class="muted" style="text-align:center">پایش مصدومیت</div>
+    </div>
+    <div class="card">
+      <div class="ring"><canvas id="talentCanv" width="140" height="140"></canvas><span id="talentTxt">استعداد 92</span></div>
+      <div class="muted" style="text-align:center">امتیاز AI بازیکن برتر</div>
+    </div>
+    <div class="card">
+      <div class="ring"><canvas id="commitCanv" width="140" height="140"></canvas><span id="commitTxt">تعهد 96%</span></div>
+      <div class="muted" style="text-align:center">حضور و تکلیف خانگی</div>
+    </div>
+  </section>
+
+  <!-- HEATMAP + ZONES -->
+  <section class="grid two">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h3 style="margin:0">Heatmap پویا — مسیر بازیکن</h3>
+        <div class="legend"><span class="grad"></span><span class="muted" style="font-size:12px">کم ← حرارت ← زیاد</span></div>
+      </div>
+      <div class="pitch" id="pitch">
+        <div class="lines"></div><div class="mid"></div>
+        <canvas id="heat" class="heat"></canvas>
+        <canvas id="trail" class="heat"></canvas>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <div class="pill">بازیکن: ی. شریفی (RW)</div><div class="pill">دوندگی: 9.8km</div><div class="pill">اسپرینت: 7</div>
+        <button class="btn ghost" id="toggleAnim">توقف/شروع</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h3 style="margin:0">Zone Load</h3><div class="pill">نیم‌فضای راست: پرترافیک</div></div>
+      <table class="table">
+        <thead><tr><th>منطقه</th><th>دقایق</th><th>شوت</th><th>پاس کلیدی</th><th>xThreat</th></tr></thead>
+        <tbody id="zoneBody"></tbody>
+      </table>
+      <div class="spark" style="margin-top:8px;height:60px"><svg id="zoneSpark" viewBox="0 0 600 60" preserveAspectRatio="none"></svg></div>
+    </div>
+  </section>
+
+  <!-- GPS + LIVE -->
+  <section class="grid two">
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h3 style="margin:0">GPS Metrics — پیشرفته</h3><div class="row"><div class="pill">HSR>19.8</div><div class="pill">Sprint>25</div></div></div>
+      <table class="table">
+        <thead><tr><th>بازیکن</th><th>مسافت (km)</th><th>HSR (m)</th><th>اسپرینت</th><th>ماکس سرعت</th><th>شتاب>3</th></tr></thead>
+        <tbody id="gpsBody"></tbody>
+      </table>
+      <div class="spark" style="margin-top:8px"><svg id="gpsSpark" viewBox="0 0 600 40" preserveAspectRatio="none"></svg></div>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h3 style="margin:0">Live Monitoring</h3><div class="row"><div class="pill" id="online">Online: 12/16</div><button class="btn ghost" id="toggleLive">شروع/توقف</button></div></div>
+      <div class="spark" style="height:120px"><svg id="liveSpark" viewBox="0 0 600 120" preserveAspectRatio="none"></svg></div>
+      <div class="muted" style="font-size:12px">سرعت و HR لحظه‌ای • هشدار بار</div>
+      <ul id="alerts" style="margin:6px 0 0 0; padding:0 16px; line-height:1.9">
+        <li>⚠️ ب. کرمی — HR 188bpm • کاهش شدت</li>
+        <li>ℹ️ ی. شریفی — Sprint #6 در 4' اخیر</li>
+        <li>✅ س. بلوچ — ACWR ایمن</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- WELLNESS + LOAD -->
+  <section class="grid two">
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h3 style="margin:0">Wellness</h3><div class="pill">پاسخ امروز: 26/29</div></div>
+      <table class="table">
+        <thead><tr><th>بازیکن</th><th>خواب</th><th>خستگی</th><th>استرس</th><th>درد</th><th>وضعیت</th></tr></thead>
+        <tbody>
+          <tr><td>ی. شریفی</td><td>8</td><td>3</td><td>2</td><td>1</td><td><span class="pill">سبز</span></td></tr>
+          <tr><td>س. بلوچ</td><td>6</td><td>5</td><td>3</td><td>2</td><td><span class="pill" style="border-color:#806b1a;color:#f7d36a">زرد</span></td></tr>
+          <tr><td>ب. کرمی</td><td>5</td><td>6</td><td>6</td><td>3</td><td><span class="pill" style="border-color:#6b1a1a;color:#ff9f9f">قرمز</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h3 style="margin:0">Training Load</h3><div class="row"><div class="pill">RPE×min</div><div class="pill">هفتگی</div></div></div>
+      <table class="table">
+        <thead><tr><th>بازیکن</th><th>جلسه</th><th>RPE</th><th>دقیقه</th><th>Load</th><th>ACWR</th></tr></thead>
+        <tbody>
+          <tr><td>ی. شریفی</td><td>تمرین 1402</td><td>6</td><td>70</td><td>420</td><td>0.82</td></tr>
+          <tr><td>س. بلوچ</td><td>تمرین 1402</td><td>7</td><td>65</td><td>455</td><td>0.95</td></tr>
+          <tr><td>ب. کرمی</td><td>دوستانه</td><td>8</td><td>80</td><td>640</td><td>1.28</td></tr>
+        </tbody>
+      </table>
+      <div class="spark" style="margin-top:8px"><svg id="loadSpark" viewBox="0 0 600 40" preserveAspectRatio="none"></svg></div>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // Wireframe toggle
+  document.getElementById('toggleWire').addEventListener('click',()=>document.body.classList.toggle('wire'));
+
+  // KPI canvas rings
+  function drawRing(canvas, percent, color){
+    const ctx=canvas.getContext('2d'), r=canvas.width/2-10, cx=canvas.width/2, cy=canvas.height/2;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.lineWidth=12; ctx.strokeStyle='#2b3a45'; ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.stroke();
+    const grad=ctx.createLinearGradient(0,0,canvas.width,0); grad.addColorStop(0,color); grad.addColorStop(1,'#72ffc2');
+    ctx.strokeStyle=grad; ctx.beginPath(); ctx.arc(cx,cy,r,-Math.PI/2,(percent*2*Math.PI)-Math.PI/2); ctx.stroke();
+  }
+  function animateRing(canvas, target, color){
+    let p=0; const step=()=>{p+=(target-p)*0.12; drawRing(canvas,p,color); if(Math.abs(target-p)>0.002) requestAnimationFrame(step)}; step();
+  }
+  animateRing(document.getElementById('acwrCanv'),0.84,'#19c37d');
+  animateRing(document.getElementById('injCanv'),0.31,'#f7b500');
+  animateRing(document.getElementById('talentCanv'),0.92,'#19c37d');
+  animateRing(document.getElementById('commitCanv'),0.96,'#19c37d');
+
+  // Heatmap + trail
+  const pitch=document.getElementById('pitch'), heat=document.getElementById('heat'), trail=document.getElementById('trail');
+  function size(){[heat,trail].forEach(c=>{c.width=pitch.clientWidth; c.height=pitch.clientHeight})}
+  new ResizeObserver(size).observe(pitch); size();
+  const hctx=heat.getContext('2d'), tctx=trail.getContext('2d');
+  function dot(ctx,x,y,r,a){const g=ctx.createRadialGradient(x,y,0,x,y,r); g.addColorStop(0,`rgba(25,195,125,${a})`); g.addColorStop(1,'rgba(25,195,125,0)'); ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();}
+  function seed(){hctx.clearRect(0,0,heat.width,heat.height); for(let i=0;i<120;i++){const x=(0.55+0.35*Math.random())*heat.width, y=(0.25+0.6*Math.random())*heat.height; dot(hctx,x,y,12+Math.random()*18,0.04+Math.random()*0.08)}}
+  seed();
+  const path=[]; for(let i=0;i<260;i++){const px=0.52+0.35*(i/260); const wob=(Math.sin(i/9)+Math.sin(i/5))*0.01; const py=0.65-0.35*(i/260)+wob; path.push([px,py])}
+  let idx=0, animOn=true; function step(){ if(!animOn) return; const [px,py]=path[idx%path.length]; const x=px*trail.width, y=py*trail.height; dot(tctx,x,y,18,0.28); tctx.fillStyle='rgba(15,21,24,0.05)'; tctx.fillRect(0,0,trail.width,trail.height); idx++ }
+  let timer=setInterval(step,40); document.getElementById('toggleAnim').addEventListener('click',()=>{animOn=!animOn});
+
+  // Zone table + spark
+  const zoneRows=[['راست',28,6,5,0.42],['مرکز',19,3,4,0.25],['چپ',11,1,2,0.12]], zb=document.getElementById('zoneBody');
+  zoneRows.forEach(r=>{const tr=document.createElement('tr'); r.forEach((c,i)=>{const td=document.createElement('td'); td.textContent=(i===4?c.toFixed(2):c); tr.appendChild(td)}); zb.appendChild(tr)});
+  const zsvg=document.getElementById('zoneSpark'); function drawZone(){const pts=[]; for(let x=0;x<=600;x+=12){const v=20+10*Math.sin((x+Date.now()/20)/40)+5*Math.random(); const y=50-(v/35)*40; pts.push(`${x},${y.toFixed(1)}`)} zsvg.innerHTML=`<polyline points="${pts.join(' ')}" fill="none" stroke="#19c37d" stroke-width="2"/>` }
+  setInterval(drawZone,300); drawZone();
+
+  // GPS table + spark
+  const gpsRows=[['ی. شریفی','9.8','1120','7','31.4','12'],['ب. کرمی','8.4','980','6','30.2','9'],['س. بلوچ','7.6','820','5','29.1','7'],['م. قاسمی','9.1','1015','6','30.8','11'],['ن. عباسی','8.7','930','5','30.1','8']];
+  const gb=document.getElementById('gpsBody'); gpsRows.forEach(r=>{const tr=document.createElement('tr'); const names=['نام','مسافت','HSR','اسپرینت','Vmax','Accel>3']; r.forEach((c,i)=>{const td=document.createElement('td'); td.textContent= i===4? (c+' km/h') : c; tr.appendChild(td)}); gb.appendChild(tr)})
+  const gsvg=document.getElementById('gpsSpark'); function drawGps(){const pts=[]; for(let x=0;x<=600;x+=12){const v=26+6*Math.sin((x+Date.now()/30)/50)+2*Math.random(); const y=36-(v/40)*30; pts.push(`${x},${y.toFixed(1)}`)} gsvg.innerHTML=`<polyline points="${pts.join(' ')}" fill="none" stroke="#19c37d" stroke-width="2"/>` }
+  setInterval(drawGps,400); drawGps();
+
+  // Live monitoring
+  let liveOn=false, t=0, liveTimer=null; const liveSvg=document.getElementById('liveSpark');
+  function drawLive(){t+=10; const speedPts=[], hrPts=[]; for(let x=0;x<=600;x+=12){const sp=12+6*Math.sin((x+t)/40)+2*Math.random(); const hr=70+40*Math.abs(Math.sin((x+t)/80))+10*Math.random(); const y1=100-(sp/20)*80, y2=110-(hr/190)*100; speedPts.push(`${x},${y1.toFixed(1)}`); hrPts.push(`${x},${y2.toFixed(1)}`)} liveSvg.innerHTML=`<polyline points='${speedPts.join(' ')}' fill='none' stroke='#19c37d' stroke-width='2'/><polyline points='${hrPts.join(' ')}' fill='none' stroke='#72ffc2' stroke-width='1.6'/>` }
+  function toggleLive(){liveOn=!liveOn; if(liveOn){liveTimer=setInterval(drawLive,420)} else {clearInterval(liveTimer)}}
+  document.getElementById('toggleLive').addEventListener('click',toggleLive); drawLive();
+
+  // Load spark
+  const lsvg=document.getElementById('loadSpark'); function drawLoad(){const pts=[]; for(let x=0;x<=600;x+=75){const v=30+Math.random()*10+10*Math.sin((x+Date.now()/50)/80); const y=36-(v/60)*30; pts.push(`${x},${y.toFixed(1)}`)} lsvg.innerHTML=`<polyline points='${pts.join(' ')}' fill='none' stroke='#19c37d' stroke-width='2'/>` }
+  setInterval(drawLoad,800); drawLoad();
+
+  // Demo button scroll to heatmap
+  document.getElementById('startDemo').addEventListener('click',()=>document.getElementById('pitch').scrollIntoView({behavior:'smooth'}));
+</script>
+</body>
+</html>
